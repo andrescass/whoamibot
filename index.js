@@ -16,16 +16,20 @@ class Game {
     }
 }
 
-var gameDict = {};
+var gameDict = {}; // Diccionario de juegos de la forma {chat.id : Game}
 
-bot.on('message', (msg) => {
+bot.on('message', (msg) => { // Rutina a la que entra cada vez que recibe un mensaje
     
     if(Object.entries(gameDict).length > 0) // Reviso si hay juegos en curso
     {
         for([id, game] of Object.entries(gameDict)) // Si hay juegos en curso, reviso en cada juego
         {
-            /*if(game.getWors){ // Chequeo que el juego esté en etapa de recibir palabras
-                var gameId = 0;
+            if(game.getWors){ // Chequeo que el juego esté en etapa de recibir palabras
+                // Acá iría la recepción de palabras. Después del segundo timer se desactiva getWords,
+                // así que no entra más acá
+
+
+                /*var gameId = 0;
                 game.gamersList.forEach(element => {
                     var sender = false;
                     if(msg.from.id == element[0]) // Me fijo que el que escribe esté en uno de esos juegos
@@ -41,8 +45,8 @@ bot.on('message', (msg) => {
                             game.wordSender.push(msg.from.id);
                         }
                     }
-                });
-            }*/
+                });*/
+            }
         }
     }
     /*var Hi = "hi";
@@ -59,32 +63,42 @@ bot.onText(/\/start/, (msg) => {
     });
 
 
-bot.onText(/\/startGuessing/, (msg) => {
-
-    if(msg.chat.id === msg.from.id)
+    /*
+    * Acá entra cuando recibe el comando de juego nuevo
+    */
+bot.onText(/\/startGuessing/, (msg) => { 
+    /* Reviso si el mensaje viene de un chat privado o grupo. 
+    * Si el chat es privado, el id del chat coincide con el id del que envió el mensaje
+    * Esto se cumple para enviar mensajes. Si le querés mandar un mensaje privado a un usuario usás el id del usuario 
+    * en la función de envío de mensajes
+    */
+    if(msg.chat.id === msg.from.id) 
     {
         bot.sendMessage(msg.chat.id, "Este comando solo puede ejecutarse desde un grupo");
     }
-    else{
-
-    
-        var newGame = new Game(msg.chat.id);
-        gameDict[msg.chat.id] = newGame;
+    else{    
+        var newGame = new Game(msg.chat.id); // Creo un nuevo juego y lo agrego al diccionario
+        gameDict[msg.chat.id] = newGame;    // TODO: verificar si ya hay un juego en curso
 
         sentMasg = bot.sendMessage(msg.chat.id, "Dale, copate", {
             reply_markup: {
                 inline_keyboard: [
                     [{
                         text: "Me prendo",
-                        callback_data: JSON.stringify({
+                        callback_data: JSON.stringify({ // Estos son parámetros que se pasan al callback
                             'command': 'join',
-                            'group'  : msg.chat.id,
+                            'group'  : msg.chat.id, // Para saber a que chat pertenece el participante que apretó el botón
                         })
 
                     }]
                 ],
                 }
             }).then((result)=>{setTimeout(() => {
+                /*
+                * Este ptimer timer finaliza la aceptación de participantes y elimina el botón. 
+                * Elije al adivinador y lo comunica. Pide los nombres para adivinar.
+                * TODO: Una manera de que no repita participante en adivinar, al menos por un rato
+                */
                 var guesser;
                 bot.deleteMessage(msg.chat.id, result.message_id);
                 guesser = gameDict[msg.chat.id].gamersList[Math.floor(Math.random() * gameDict[msg.chat.id].gamersList.length)];
@@ -106,13 +120,16 @@ bot.onText(/\/startGuessing/, (msg) => {
                     /* Este timeout avisa que no hay más tiempo para sugerir palabras, elimina el objeto game del diccionario y se despide
                     * dejando que la gente juegue, ya que no tiene nada mas para hacer.
                     */
-                if(gameDict[msg.chat.id].words.length > 0)
+                if(gameDict[msg.chat.id].words.length > 0) // Luego de chequear que se sugirieron palabras, elije una random y la comunica a los participantes
                 {
 
                 }
+                else{
+                    bot.sendMessage(msg.chat.id, "No sugirieron palabras, ¿que onda gente?");
+                }
                 bot.sendMessage(msg.chat.id, "Mi tarea aquí ha finalizado, diviertanse");
                 delete gameDict[msg.chat.id];
-                }, 60000);
+                }, 120000);
             });
         }   
         
@@ -120,15 +137,20 @@ bot.onText(/\/startGuessing/, (msg) => {
 
 join_message = ''
 
+/*
+* Callback del botón de unirse.
+* Verifica que el participante no se haya unido antes, y lo agrega al array de participantes.
+* Se puede mejorar usando el array de Ids
+*/
 bot.on('callback_query', function onCallbackQuery(callbackQuery) {
-    const data = JSON.parse(callbackQuery.data);
+    const data = JSON.parse(callbackQuery.data); // En callbackQuery viene tanto los parámetros que pasé yo (command y group) como el objeto message
     const opts = {
         chat_id: callbackQuery.message.chat.id,
         join_message: callbackQuery.message.message_id,
         sender_id: callbackQuery.from.id,
         sender_name: callbackQuery.from.first_name
     };
-    if (data.command === 'join') {
+    if (data.command === 'join') { // en data quedan los parámetros user defined (command y group)
         var exists = false;
         gameDict[data.group].gamersList.forEach(element => {
             if(element[0] == opts.sender_id)
