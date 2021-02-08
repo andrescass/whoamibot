@@ -169,7 +169,7 @@ bot.onText(/\/startguessing/, (msg) => {
                     }
                 }
                 
-            }, 30000)}).then((result)=>{
+            }, 60000)}).then((result)=>{
                 
             });
         }   
