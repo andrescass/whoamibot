@@ -34,18 +34,18 @@ bot.on('message', (msg) => { // Rutina a la que entra cada vez que recibe un men
                 var gameId = 0;
                 game.gamersList.forEach(element => {
                     var sender = false;
-                    if(msg.from.id == element[0]) // Me fijo que el que escribe esté en uno de esos juegos
+                    if(msg.chat.id == element[0]) // Me fijo que el que escribe esté en uno de esos juegos
                     {
                         game.wordSender.forEach(element => {
                             if(msg.from.id == element) { // me fijo que no haya enviado aún una palabra
                                 sender = true;
                             }
                         })
-                        if(!sender)
+                        if(!sender && (element != game.guesser[0]))
                         {
                             game.words.push(msg.text.toString());
                             game.wordSender.push(msg.from.id);
-                            bot.sendMessage(msg.from.id, "Gracias por tu colaboración");
+                            //bot.sendMessage(msg.from.id, "Gracias por tu colaboración");
                         }
                     }
                     if (game.wordSender.length == (game.gamersList.length-1)) // Hay que refaccionarlo solo para los que mandan palabras (-1)
@@ -134,8 +134,9 @@ bot.onText(/\/startguessing/, (msg) => {
                 if (gameDict[msg.chat.id].gamersList.length > 1)
                 {
                     var guesser;
+                    var guesser_idx = Math.floor(Math.random() * gameDict[msg.chat.id].gamersList.length);
                     
-                    guesser = gameDict[msg.chat.id].gamersList[Math.floor(Math.random() * gameDict[msg.chat.id].gamersList.length)];
+                    guesser = gameDict[msg.chat.id].gamersList[guesser_idx];
                     gameDict[msg.chat.id].guesser = [guesser[0], guesser[1]]; // Determino guesser
                     bot.sendMessage(msg.chat.id, "Le toca adivinar a " + guesser[1]);
 
