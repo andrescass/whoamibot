@@ -3,7 +3,7 @@ const token = '1597161992:AAGrOcoYUl3e6uVbJFV0i0eHjWHmVqeqo3Y';
 
 const bot = new TelegramBot(token, {polling: true});
 
-const debugging = true;
+const debugging = false;
 
 // Clase para almacenar datos del juego
 class Game {
@@ -45,9 +45,10 @@ bot.on('message', (msg) => { // Rutina a la que entra cada vez que recibe un men
                         {
                             game.words.push(msg.text.toString());
                             game.wordSender.push(msg.from.id);
+                            bot.sendMessage(msg.from.id, "Gracias por tu colaboración");
                         }
                     }
-                    if (game.wordSender.length == game.gamersList.length) // Hay que refaccionarlo solo para los que mandan palabras (-1)
+                    if (game.wordSender.length == (game.gamersList.length-1)) // Hay que refaccionarlo solo para los que mandan palabras (-1)
                     {
                         clearTimeout(wordsTimeout);
                         timeToPlay(game.chat_id);
@@ -65,7 +66,7 @@ bot.on('message', (msg) => { // Rutina a la que entra cada vez que recibe un men
 
 bot.onText(/\/start/, (msg) => {
 
-    bot.sendMessage(msg.chat.id, "Welcome");
+    bot.sendMessage(msg.chat.id, "Vamo' a jugar");
         
     });
 
@@ -73,7 +74,7 @@ bot.onText(/\/start/, (msg) => {
     /*
     * Acá entra cuando recibe el comando de juego nuevo
     */
-bot.onText(/\/startGuessing/, (msg) => { 
+bot.onText(/\/startguessing/, (msg) => { 
     /* Reviso si el mensaje viene de un chat privado o grupo. 
     * Si el chat es privado, el id del chat coincide con el id del que envió el mensaje
     * Esto se cumple para enviar mensajes. Si le querés mandar un mensaje privado a un usuario usás el id del usuario 
@@ -82,6 +83,10 @@ bot.onText(/\/startGuessing/, (msg) => {
     if(msg.chat.id === msg.from.id) 
     {
         bot.sendMessage(msg.chat.id, "Este comando solo puede ejecutarse desde un grupo");
+    }
+    else if(gameDict.hasOwnProperty(msg.chat.id))
+    {
+        bot.sendMessage(msg.chat.id, "Ya hay un juego en curso en este grupo, media pila gente");
     }
     else
     {    
@@ -158,12 +163,12 @@ bot.onText(/\/startGuessing/, (msg) => {
                 {
                     if(!debugging)
                     {
-                        bot.sendMessage(msg.chat.id, "Forrxs, para que me llamaron?\n Ponganse de acuerdo para jugar antes de despertarme.");
+                        bot.sendMessage(msg.chat.id, "Forrxs, para que me llamaron?\nPonganse de acuerdo para jugar antes de despertarme.");
                         delete gameDict[msg.chat.id];
                     }
                 }
                 
-            }, 5000)}).then((result)=>{
+            }, 30000)}).then((result)=>{
                 
             });
         }   
@@ -173,7 +178,14 @@ bot.onText(/\/startGuessing/, (msg) => {
 function timeToPlay(chatId) {
     if(gameDict[chatId].words.length > 0) // Luego de chequear que se sugirieron más de 2 palabras (refaccionar), elije una random y la comunica a los participantes
     {
-        chosenWord = gameDict[chatId].words[Math.floor(Math.random() * gameDict[msg.chat.id].words.length)];
+        if(gameDict[chatId].words.length > 1)
+        {
+            chosenWord = gameDict[chatId].words[Math.floor(Math.random() * gameDict[chatId].words.length)];
+        }
+        else {
+            chosenWord = gameDict[chatId].words[0];
+        }
+
         gameDict[chatId].gamersIdList.forEach((gamer) => {
             //if (gamer in gameDict[chatId].wordSender)
             if(gamer != gameDict[chatId].guesser[0])
