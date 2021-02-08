@@ -3,6 +3,8 @@ const token = '1597161992:AAGrOcoYUl3e6uVbJFV0i0eHjWHmVqeqo3Y';
 
 const bot = new TelegramBot(token, {polling: true});
 
+const debugging = true;
+
 // Clase para almacenar datos del juego
 class Game {
     constructor(chat_id) {
@@ -24,12 +26,12 @@ bot.on('message', (msg) => { // Rutina a la que entra cada vez que recibe un men
     {
         for([id, game] of Object.entries(gameDict)) // Si hay juegos en curso, reviso en cada juego
         {
-            if(game.getWors){ // Chequeo que el juego esté en etapa de recibir palabras
+            if(game.getWors)
+            {   // Chequeo que el juego esté en etapa de recibir palabras
                 // Acá iría la recepción de palabras. Después del segundo timer se desactiva getWords,
                 // así que no entra más acá
 
-
-                /*var gameId = 0;
+                var gameId = 0;
                 game.gamersList.forEach(element => {
                     var sender = false;
                     if(msg.from.id == element[0]) // Me fijo que el que escribe esté en uno de esos juegos
@@ -45,7 +47,12 @@ bot.on('message', (msg) => { // Rutina a la que entra cada vez que recibe un men
                             game.wordSender.push(msg.from.id);
                         }
                     }
-                });*/
+                    if (game.wordSender.length == game.gamersList.length) // Hay que refaccionarlo solo para los que mandan palabras (-1)
+                    {
+                        clearTimeout(wordsTimeout);
+                        timeToPlay(game.chat_id);
+                    }
+                });
             }
         }
     }
@@ -76,7 +83,8 @@ bot.onText(/\/startGuessing/, (msg) => {
     {
         bot.sendMessage(msg.chat.id, "Este comando solo puede ejecutarse desde un grupo");
     }
-    else{    
+    else
+    {    
         var newGame = new Game(msg.chat.id); // Creo un nuevo juego y lo agrego al diccionario
         gameDict[msg.chat.id] = newGame;    // TODO: verificar si ya hay un juego en curso
 
@@ -99,41 +107,93 @@ bot.onText(/\/startGuessing/, (msg) => {
                 * Elije al adivinador y lo comunica. Pide los nombres para adivinar.
                 * TODO: Una manera de que no repita participante en adivinar, al menos por un rato
                 */
-                var guesser;
+
+                // Boro el botón de unirse
                 bot.deleteMessage(msg.chat.id, result.message_id);
-                guesser = gameDict[msg.chat.id].gamersList[Math.floor(Math.random() * gameDict[msg.chat.id].gamersList.length)];
-                gameDict[msg.chat.id].guesser = [guesser[0], guesser[1]]; // Determino guesser
-                bot.sendMessage(msg.chat.id, "Le toca adivinar a " + guesser[1]);
 
-                // Envio mensaje a todos los participantes avisando quien es el guesser y, a los que no son el guesser, pidiendoles una palabra
-                gameDict[msg.chat.id].gamersList.forEach(element => {
-                
-                    if(element[0] != guesser[0])
-                    {
-                        bot.sendMessage(element[0], "necesito que me sugieras una persona, personaje o similar ");
-                    }
-                });
-
-                gameDict[msg.chat.id].getWors = true;
-            }, 60000)}).then((result)=>{
-                setTimeout(() => {
-                    /* Este timeout avisa que no hay más tiempo para sugerir palabras, elimina el objeto game del diccionario y se despide
-                    * dejando que la gente juegue, ya que no tiene nada mas para hacer.
-                    */
-                if(gameDict[msg.chat.id].words.length > 0) // Luego de chequear que se sugirieron palabras, elije una random y la comunica a los participantes
+                // Este siguiente IF es para probar de a un jugador
+                if (gameDict[msg.chat.id].gamersList.length == 1 && debugging)
                 {
+                    bot.sendMessage(msg.chat.id, "necesito que me sugieras una persona, personaje o similar ");
+                    gameDict[msg.chat.id].getWors = true;
 
+                    wordsTimeout = setTimeout(() => {
+
+                        timeToPlay(msg.chat.id);
+                        /* Este timeout avisa que no hay más tiempo para sugerir palabras, elimina el objeto game del diccionario y se despide
+                        * dejando que la gente juegue, ya que no tiene nada mas para hacer.
+                        */
+                   
+                    }, 120000);
                 }
-                else{
-                    bot.sendMessage(msg.chat.id, "No sugirieron palabras, ¿que onda gente?");
+                if (gameDict[msg.chat.id].gamersList.length > 1)
+                {
+                    var guesser;
+                    
+                    guesser = gameDict[msg.chat.id].gamersList[Math.floor(Math.random() * gameDict[msg.chat.id].gamersList.length)];
+                    gameDict[msg.chat.id].guesser = [guesser[0], guesser[1]]; // Determino guesser
+                    bot.sendMessage(msg.chat.id, "Le toca adivinar a " + guesser[1]);
+
+                    // Envio mensaje a todos los participantes avisando quien es el guesser y, a los que no son el guesser, pidiendoles una palabra
+                    gameDict[msg.chat.id].gamersList.forEach(element => {
+                
+                        if(element[0] != guesser[0])
+                        {
+                            bot.sendMessage(element[0], "necesito que me sugieras una persona, personaje o similar ");
+                        }
+                    });
+
+                    gameDict[msg.chat.id].getWors = true;
+
+                    wordsTimeout = setTimeout(() => {
+
+                        timeToPlay(msg.chat.id);
+                        /* Este timeout avisa que no hay más tiempo para sugerir palabras, elimina el objeto game del diccionario y se despide
+                        * dejando que la gente juegue, ya que no tiene nada mas para hacer.
+                        */
+                   
+                    }, 120000);
                 }
-                bot.sendMessage(msg.chat.id, "Mi tarea aquí ha finalizado, diviertanse");
-                delete gameDict[msg.chat.id];
-                }, 120000);
+                else
+                {
+                    if(!debugging)
+                    {
+                        bot.sendMessage(msg.chat.id, "Forrxs, para que me llamaron?\n Ponganse de acuerdo para jugar antes de despertarme.");
+                        delete gameDict[msg.chat.id];
+                    }
+                }
+                
+            }, 5000)}).then((result)=>{
+                
             });
         }   
         
     });
+
+function timeToPlay(chatId) {
+    if(gameDict[chatId].words.length > 0) // Luego de chequear que se sugirieron más de 2 palabras (refaccionar), elije una random y la comunica a los participantes
+    {
+        chosenWord = gameDict[chatId].words[Math.floor(Math.random() * gameDict[msg.chat.id].words.length)];
+        gameDict[chatId].gamersIdList.forEach((gamer) => {
+            //if (gamer in gameDict[chatId].wordSender)
+            if(gamer != gameDict[chatId].guesser[0])
+            {
+                bot.sendMessage(gamer, `La palabra, personaje o persona a adivinar es ${chosenWord}`);
+            }
+            else
+            {
+                bot.sendMessage(gamer, 'Suerte imbécil!'); 
+            }
+        });
+        
+    }
+    else
+    {
+        bot.sendMessage(chatId, "No sugirieron palabras, ¿que onda gente?");
+    }
+    bot.sendMessage(chatId, "Mi tarea aquí ha finalizado, diviertanse");
+    delete gameDict[chatId];
+}
 
 join_message = ''
 
