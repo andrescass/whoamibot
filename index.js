@@ -251,6 +251,7 @@ bot.on('callback_query', function onCallbackQuery(callbackQuery) {
             gameDict[data.group].gamersList.push([opts.sender_id, opts.sender_name]);
             gameDict[data.group].gamersIdList.push(opts.sender_id);
             bot.sendMessage(opts.sender_id, "Gracias por unirte " + opts.sender_name);
+            bot.sendMessage(data.group, opts.sender_name + "se ha unido " );
         }
         else{
             bot.sendMessage(opts.sender_id, "Ya te habías unido, aflojale hermane " );
