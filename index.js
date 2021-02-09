@@ -1,9 +1,22 @@
 const TelegramBot = require('node-telegram-bot-api');
-const token = '1597161992:AAGrOcoYUl3e6uVbJFV0i0eHjWHmVqeqo3Y';
+const express = require('express')
+const bodyParser = require('body-parser');
 
-const bot = new TelegramBot(token, {polling: true});
+require('dotenv').config();
+const token = process.env.TELEGRAM_TOKEN;
+
+//const bot = new TelegramBot(token, {polling: true});
 
 const debugging = false;
+
+let bot;
+ 
+if (process.env.NODE_ENV === 'production') {
+   bot = new TelegramBot(token);
+   bot.setWebHook(process.env.HEROKU_URL + bot.token);
+} else {
+   bot = new TelegramBot(token, { polling: true });
+}
 
 // Clase para almacenar datos del juego
 class Game {
@@ -45,7 +58,7 @@ bot.on('message', (msg) => { // Rutina a la que entra cada vez que recibe un men
                         {
                             game.words.push(msg.text.toString());
                             game.wordSender.push(msg.from.id);
-                            //bot.sendMessage(msg.from.id, "Gracias por tu colaboración");
+                            bot.sendMessage(msg.from.id, "Gracias por tu colaboración");
                         }
                     }
                     if (game.wordSender.length == (game.gamersList.length-1)) // Hay que refaccionarlo solo para los que mandan palabras (-1)
@@ -139,6 +152,7 @@ bot.onText(/\/startguessing/, (msg) => {
                     guesser = gameDict[msg.chat.id].gamersList[guesser_idx];
                     gameDict[msg.chat.id].guesser = [guesser[0], guesser[1]]; // Determino guesser
                     bot.sendMessage(msg.chat.id, "Le toca adivinar a " + guesser[1]);
+                    bot.sendMessage(guesser[0], "Acordate que te toca adivinar ");
 
                     // Envio mensaje a todos los participantes avisando quien es el guesser y, a los que no son el guesser, pidiendoles una palabra
                     gameDict[msg.chat.id].gamersList.forEach(element => {
@@ -169,7 +183,7 @@ bot.onText(/\/startguessing/, (msg) => {
                     }
                 }
                 
-            }, 60000)}).then((result)=>{
+            }, 120000)}).then((result)=>{
                 
             });
         }   
@@ -255,4 +269,13 @@ bot.on('callback_query', function onCallbackQuery(callbackQuery) {
 });
 
 
-
+const app = express();
+ 
+app.use(bodyParser.json());
+ 
+app.listen(process.env.PORT);
+ 
+app.post('/' + bot.token, (req, res) => {
+  bot.processUpdate(req.body);
+  res.sendStatus(200);
+});
